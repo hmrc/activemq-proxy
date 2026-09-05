@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.activemqproxy.config
+package uk.gov.hmrc.activemqproxy.models
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
+import play.api.libs.json.{Json, OFormat}
 
-@Singleton
-class AppConfig @Inject() (config: Configuration):
+final case class MessageProperty(key: String, value: String)
 
-  val appName: String = config.get[String]("appName")
-
-  val brokerUrl: String = config.get[String]("jms.brokerUrl")
+object MessageProperty:
+  given OFormat[MessageProperty] = Json.format[MessageProperty]

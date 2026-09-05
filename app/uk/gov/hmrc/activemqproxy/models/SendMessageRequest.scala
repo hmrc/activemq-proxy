@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.activemqproxy.config
+package uk.gov.hmrc.activemqproxy.models
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
+import play.api.libs.json.{Json, Reads}
 
-@Singleton
-class AppConfig @Inject() (config: Configuration):
+final case class SendMessageRequest(
+  queueIdentifier: QueueIdentifier,
+  payload: String,
+  properties: Option[List[MessageProperty]],
+  correlationId: Option[String]
+):
+  def propertiesOrEmpty: List[MessageProperty] = properties.getOrElse(Nil)
 
-  val appName: String = config.get[String]("appName")
-
-  val brokerUrl: String = config.get[String]("jms.brokerUrl")
+object SendMessageRequest:
+  given Reads[SendMessageRequest] = Json.reads[SendMessageRequest]

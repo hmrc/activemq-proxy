@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.activemqproxy.config
+package uk.gov.hmrc.activemqproxy
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.activemqproxy.services.{ActiveMqService, QueueService}
 
-@Singleton
-class AppConfig @Inject() (config: Configuration):
+class ModuleSpec extends AnyWordSpec with Matchers:
 
-  val appName: String = config.get[String]("appName")
-
-  val brokerUrl: String = config.get[String]("jms.brokerUrl")
+  "Module" should:
+    "bind QueueService to the ActiveMQ implementation" in:
+      val app = new GuiceApplicationBuilder().build()
+      try app.injector.instanceOf[QueueService] shouldBe a[ActiveMqService]
+      finally app.stop()
