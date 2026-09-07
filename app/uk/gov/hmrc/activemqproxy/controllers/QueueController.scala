@@ -1,0 +1,77 @@
+/*
+ * Copyright 2026 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package uk.gov.hmrc.activemqproxy.controllers
+
+import play.api.Logging
+import play.api.libs.json.*
+import play.api.mvc.{Action, ControllerComponents}
+import uk.gov.hmrc.activemqproxy.models.{SendMessageRequest, SendMessageResponse}
+import uk.gov.hmrc.activemqproxy.services.QueueService
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+
+import java.util.UUID
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
+
+@Singleton
+class QueueController @Inject() (
+  cc: ControllerComponents,
+  queueService: QueueService
+)(using ec: ExecutionContext)
+    extends BackendController(cc)
+    with Logging:
+
+  private val CorrelationIdLength = 32
+
+  val send: Action[JsValue] =
+    Action.async(parse.json): request =>
+      request.body.validate[SendMessageRequest] match
+        case JsError(errors) =>
+          Future.successful(BadRequest(errorJson(BAD_REQUEST, "Invalid request body", Some(JsError.toJson(errors)))))
+        case JsSuccess(sendMessageRequest, _) =>
+          resolveCorrelationId(sendMessageRequest.correlationId) match
+            case Left(message) =>
+              Future.successful(BadRequest(errorJson(BAD_REQUEST, message)))
+            case Right(correlationId) =>
+              queueService
+                .send(
+                  sendMessageRequest.queueIdentifier,
+                  sendMessageRequest.payload,
+                  sendMessageRequest.propertiesOrEmpty,
+                  correlationId
+                )
+                .map(_ => Ok(Json.toJson(SendMessageResponse(correlationId))))
+                .recover:
+                  case NonFatal(e) =>
+                    logger.error(
+                      s"Failed to publish to ${sendMessageRequest.queueIdentifier.queueName} [correlationId=$correlationId]",
+                      e
+                    )
+                    InternalServerError(errorJson(INTERNAL_SERVER_ERROR, "Failed to publish message to the queue"))
+
+  private def resolveCorrelationId(provided: Option[String]): Either[String, String] =
+    provided match
+      case Some(id) if id.length == CorrelationIdLength => Right(id)
+      case Some(id) =>
+        Left(s"correlationId must be exactly $CorrelationIdLength characters in length, but was ${id.length}")
+      case None =>
+        Right(UUID.randomUUID().toString.replace("-", ""))
+
+  private def errorJson(statusCode: Int, message: String, details: Option[JsValue] = None): JsObject =
+    Json.obj("statusCode" -> statusCode, "message" -> message) ++
+      details.fold(Json.obj())(d => Json.obj("errors" -> d))

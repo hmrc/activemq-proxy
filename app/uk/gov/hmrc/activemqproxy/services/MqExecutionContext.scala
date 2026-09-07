@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.activemqproxy.config
+package uk.gov.hmrc.activemqproxy.services
+
+import org.apache.pekko.actor.ActorSystem
+import play.api.libs.concurrent.CustomExecutionContext
 
 import javax.inject.{Inject, Singleton}
-import play.api.Configuration
 
+/** A dedicated dispatcher for the blocking JMS calls, so that they never starve Play's default (async) execution context. Configured under
+  * `mq-dispatcher`.
+  */
 @Singleton
-class AppConfig @Inject() (config: Configuration):
-
-  val appName: String = config.get[String]("appName")
-
-  val brokerUrl: String = config.get[String]("jms.brokerUrl")
+class MqExecutionContext @Inject() (actorSystem: ActorSystem) extends CustomExecutionContext(actorSystem, "mq-dispatcher")

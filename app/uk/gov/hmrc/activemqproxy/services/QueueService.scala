@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.activemqproxy.config
+package uk.gov.hmrc.activemqproxy.services
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
+import uk.gov.hmrc.activemqproxy.models.{MessageProperty, QueueIdentifier}
 
-@Singleton
-class AppConfig @Inject() (config: Configuration):
+import scala.concurrent.Future
 
-  val appName: String = config.get[String]("appName")
+trait QueueService:
 
-  val brokerUrl: String = config.get[String]("jms.brokerUrl")
+  def send(
+    queueIdentifier: QueueIdentifier,
+    payload: String,
+    properties: List[MessageProperty],
+    correlationId: String
+  ): Future[Unit]
