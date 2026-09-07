@@ -9,7 +9,7 @@ lazy val microservice = Project("activemq-proxy", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin) // Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(
-    playDefaultPort := 10404,
+    playDefaultPort := 10406,
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true,

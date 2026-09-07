@@ -69,9 +69,9 @@ The default in `application.conf` points at a local broker: `tcp://localhost:616
 Running locally involves **two separate processes**:
 
 1. the **ActiveMQ broker** — the `prh-activemq` Docker container, on `tcp://localhost:61616` (see [Local ActiveMQ broker](#local-activemq-broker) below);
-2. **this service** — a `sbt run` JVM on `http://localhost:10404`.
+2. **this service** — a `sbt run` JVM on `http://localhost:10406`.
 
-Starting the container does **not** start the service. The `POST /queue/send` calls go to port **10404** (this service), which then publishes to the broker on **61616**. If port 10404 refuses the connection, the service isn't running — start it with `sbt run`.
+Starting the container does **not** start the service. The `POST /queue/send` calls go to port **10406** (this service), which then publishes to the broker on **61616**. If port 10404 refuses the connection, the service isn't running — start it with `sbt run`.
 
 With the broker container already up, start the service:
 
@@ -79,10 +79,10 @@ With the broker container already up, start the service:
 sbt run
 ```
 
-The service starts on port `10404`. With `sbt run` still running in that terminal, smoke test from another terminal:
+The service starts on port `10406`. With `sbt run` still running in that terminal, smoke test from another terminal:
 
 ```bash
-curl -sS -X POST http://localhost:10404/activemq-proxy/queue/send \
+curl -sS -X POST http://localhost:10406/activemq-proxy/queue/send \
   -H "Content-Type: application/json" \
   -d '{
     "queueIdentifier": "AGENT_Filing_APRQ",
