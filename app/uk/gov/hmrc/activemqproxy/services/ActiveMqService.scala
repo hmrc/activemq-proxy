@@ -34,7 +34,7 @@ class ActiveMqService @Inject() (
   lifecycle: ApplicationLifecycle
 )(using ec: MqExecutionContext)
     extends QueueService
-    with Logging:
+    with Logging {
 
   // Reconnect/failover behaviour is expressed entirely in the broker URL
   // (e.g. failover:(tcp://...,tcp://...)?maxReconnectAttempts=3&...), like the mongo uri.
@@ -43,7 +43,7 @@ class ActiveMqService @Inject() (
 
   private val connectionRef = new AtomicReference[Connection]()
 
-  private def connection: Connection =
+  private def connection: Connection = {
     connectionRef.get() match
       case null =>
         synchronized {
@@ -56,6 +56,7 @@ class ActiveMqService @Inject() (
           }
         }
       case existing => existing
+  }
 
   lifecycle.addStopHook { () =>
     Future.successful {
@@ -86,3 +87,4 @@ class ActiveMqService @Inject() (
         finally producer.close()
       finally session.close()
     }
+}
