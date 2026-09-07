@@ -21,8 +21,8 @@ import play.api.libs.concurrent.CustomExecutionContext
 
 import javax.inject.{Inject, Singleton}
 
-/** A dedicated dispatcher for the blocking JMS calls, so that they never starve
-  * Play's default (async) execution context. Configured under `mq-dispatcher`.
+/** A dedicated dispatcher for the blocking JMS calls, so that they never starve Play's default (async) execution context. Configured under
+  * `mq-dispatcher`.
   */
 @Singleton
 class MqExecutionContext @Inject() (actorSystem: ActorSystem) extends CustomExecutionContext(actorSystem, "mq-dispatcher")
