@@ -19,6 +19,7 @@ package uk.gov.hmrc.activemqproxy.controllers
 import play.api.Logging
 import play.api.libs.json.*
 import play.api.mvc.{Action, ControllerComponents}
+import uk.gov.hmrc.activemqproxy.controllers.actions.AuthorisedAction
 import uk.gov.hmrc.activemqproxy.models.{SendMessageRequest, SendMessageResponse}
 import uk.gov.hmrc.activemqproxy.services.QueueService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -31,7 +32,8 @@ import scala.util.control.NonFatal
 @Singleton
 class QueueController @Inject() (
   cc: ControllerComponents,
-  queueService: QueueService
+  queueService: QueueService,
+  authorisedAction: AuthorisedAction
 )(using ec: ExecutionContext)
     extends BackendController(cc)
     with Logging:
@@ -39,7 +41,7 @@ class QueueController @Inject() (
   private val CorrelationIdLength = 32
 
   val send: Action[JsValue] =
-    Action.async(parse.json): request =>
+    authorisedAction.async(parse.json): request =>
       request.body.validate[SendMessageRequest] match
         case JsError(errors) =>
           Future.successful(BadRequest(errorJson(BAD_REQUEST, "Invalid request body", Some(JsError.toJson(errors)))))

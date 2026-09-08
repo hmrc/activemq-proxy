@@ -23,8 +23,10 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.Status
 import play.api.libs.json.{JsValue, Json}
+import play.api.mvc.{AnyContent, BodyParser, Request, Result}
 import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
+import uk.gov.hmrc.activemqproxy.controllers.actions.AuthorisedAction
 import uk.gov.hmrc.activemqproxy.models.{MessageProperty, QueueIdentifier}
 import uk.gov.hmrc.activemqproxy.services.QueueService
 
@@ -52,8 +54,15 @@ class QueueControllerSpec extends AnyWordSpec with Matchers with BeforeAndAfterA
       calls = calls :+ (queueIdentifier, payload, properties, correlationId)
       result
 
+  private val passThroughAuth: AuthorisedAction = new AuthorisedAction {
+    override def parser: BodyParser[AnyContent] = Helpers.stubControllerComponents().parsers.defaultBodyParser
+    override protected def executionContext: ExecutionContext = ExecutionContext.global
+    override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
+      block(request)
+  }
+
   private def controllerWith(service: QueueService): QueueController =
-    new QueueController(Helpers.stubControllerComponents(), service)
+    new QueueController(Helpers.stubControllerComponents(), service, passThroughAuth)
 
   private def postJson(body: JsValue) =
     FakeRequest(POST, "/queue/send").withHeaders(CONTENT_TYPE -> JSON).withBody(body)
