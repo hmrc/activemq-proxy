@@ -1,10 +1,9 @@
-import sbt.Keys.libraryDependencies
 import sbt.*
 
 object AppDependencies {
 
   private val bootstrapVersion = "10.8.0"
-  private val activeMqVersion = "6.1.5"
+  private val activeMqVersion = "6.1.6"
 
   // ActiveMQ pulls a newer jackson-databind than Pekko/Play's jackson-module-scala supports.
   // We don't use ActiveMQ's jackson features, so drop them and let Play's jackson win.
