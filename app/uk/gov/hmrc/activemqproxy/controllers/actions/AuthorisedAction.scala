@@ -27,6 +27,7 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
 import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
+import uk.gov.hmrc.activemqproxy.controllers.actions.AuthorisedAction.*
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,9 +44,6 @@ class DefaultAuthorisedAction @Inject() (
     with AuthorisedFunctions
     with Logging:
 
-  private val AgentEnrolmentKey = "HMRC-MGD-AGNT"
-  private val AgentIdentifierKey = "HMRCMGDAGENTREF"
-
   override val parser: BodyParser[AnyContent] = cc.parsers.defaultBodyParser
 
   override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
@@ -56,8 +54,8 @@ class DefaultAuthorisedAction @Inject() (
         case Some(AffinityGroup.Agent) ~ enrolments =>
           if hasAgentEnrolment(enrolments) then block(request)
           else {
-            logger.warn(s"Access denied: Agent is missing an active $AgentEnrolmentKey enrolment")
-            Future.successful(Forbidden(errorJson(FORBIDDEN, s"Agent is not enrolled for $AgentEnrolmentKey")))
+            logger.warn(s"Access denied: Agent is missing an active enrolment from: $supportedEnrolmentKeys")
+            Future.successful(Forbidden(errorJson(FORBIDDEN, s"Agent is not enrolled for any of: $supportedEnrolmentKeys")))
           }
         case affinityGroup ~ _ =>
           logger.warn(s"Access denied: affinity group '${affinityGroup.getOrElse("none")}' is not Agent")
@@ -72,12 +70,32 @@ class DefaultAuthorisedAction @Inject() (
           Forbidden(errorJson(FORBIDDEN, "User is not authorised"))
       }
 
-  private def hasAgentEnrolment(enrolments: Enrolments): Boolean =
+object AuthorisedAction:
+
+  final case class AgentEnrolment(enrolmentKey: String, identifierKey: String)
+
+  private val MgdAgentEnrolmentKey = "HMRC-MGD-AGNT"
+  private val MgdAgentIdentifierKey = "HMRCMGDAGENTREF"
+
+  private val NovaVatAgentEnrolmentKey = "HMCE-VAT-AGNT"
+  private val NovaVatAgentIdentifierKey = "AgentRefNo"
+
+  private[actions] val supportedAgentEnrolments: Seq[AgentEnrolment] = Seq(
+    AgentEnrolment(MgdAgentEnrolmentKey, MgdAgentIdentifierKey),
+    AgentEnrolment(NovaVatAgentEnrolmentKey, NovaVatAgentIdentifierKey)
+  )
+
+  private[actions] def supportedEnrolmentKeys: String = supportedAgentEnrolments.map(_.enrolmentKey).mkString(", ")
+
+  private[actions] def hasAgentEnrolment(enrolments: Enrolments): Boolean =
+    supportedAgentEnrolments.exists(hasActivatedIdentifier(enrolments, _))
+
+  private[actions] def hasActivatedIdentifier(enrolments: Enrolments, agentEnrolment: AgentEnrolment): Boolean =
     enrolments
-      .getEnrolment(AgentEnrolmentKey)
+      .getEnrolment(agentEnrolment.enrolmentKey)
       .filter(_.isActivated)
-      .flatMap(_.getIdentifier(AgentIdentifierKey))
+      .flatMap(_.getIdentifier(agentEnrolment.identifierKey))
       .isDefined
 
-  private def errorJson(statusCode: Int, message: String): JsObject =
+  private[actions] def errorJson(statusCode: Int, message: String): JsObject =
     Json.obj("statusCode" -> statusCode, "message" -> message)

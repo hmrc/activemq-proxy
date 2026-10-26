@@ -50,7 +50,8 @@ The endpoint is protected by HMRC auth. The caller must pass a bearer token (`Au
 
 - **logged in** (has an active session), **and**
 - of the **Agent** affinity group, **and**
-- holds an active **`HMRC-MGD-AGNT`** enrolment with a **`HMRCMGDAGENTREF`** identifier.
+- holds an active **`HMRC-MGD-AGNT`** enrolment with an **`HMRCMGDAGENTREF`** identifier, **or** an active **`HMCE-VAT-AGNT`** enrolment with an **`AgentRefNo`** identifier.
+
 
 **Error responses**
 
@@ -58,7 +59,7 @@ The endpoint is protected by HMRC auth. The caller must pass a bearer token (`Au
 |---|---|
 | `400 Bad Request` | Body is not JSON / missing `payload` or `queueIdentifier` / unknown `queueIdentifier` / `correlationId` not exactly 32 chars |
 | `401 Unauthorized` | No active session (missing/expired bearer token) |
-| `403 Forbidden` | Logged in but not an Agent, or Agent without an active `HMRC-MGD-AGNT` enrolment |
+| `403 Forbidden` | Logged in but not an Agent, or Agent without an active `HMRC-MGD-AGNT` or `HMCE-VAT-AGNT` enrolment |
 | `415 Unsupported Media Type` | `Content-Type` is not `application/json` |
 | `500 Internal Server Error` | The message could not be published to the broker |
 
@@ -89,7 +90,7 @@ With the broker container already up, start the service:
 sbt run
 ```
 
-The service starts on port `10406`. The endpoint requires an Agent bearer token (see [Authorisation](#authorisation)) — locally you can grab the `Authorization` header from **auth-login-stub** (log in as an Agent with an active `HMRC-MGD-AGNT` enrolment).
+The service starts on port `10406`. The endpoint requires an Agent bearer token (see [Authorisation](#authorisation)) — locally you can grab the `Authorization` header from **auth-login-stub** (log in as an Agent with an active `HMRC-MGD-AGNT` or `HMCE-VAT-AGNT` enrolment).
 
 With `sbt run` still running in that terminal, smoke test from another terminal (`$TOKEN` is that bearer token):
 
@@ -107,7 +108,7 @@ curl -sS -X POST http://localhost:10406/activemq-proxy/queue/send \
 #    HTTP 200
 ```
 
-`-sS` still prints errors (unlike `-s` alone), and `-w` shows the status code — so if the app isn't running you'll see `curl: (7) Failed to connect ...` rather than a blank line. `sbt run` is ready once it logs `Application started`. Without a valid Agent token you'll get `401` (no token) or `403` (not an Agent / missing `HMRC-MGD-AGNT` enrolment).
+`-sS` still prints errors (unlike `-s` alone), and `-w` shows the status code — so if the app isn't running you'll see `curl: (7) Failed to connect ...` rather than a blank line. `sbt run` is ready once it logs `Application started`. Without a valid Agent token you'll get `401` (no token) or `403` (not an Agent / missing `HMRC-MGD-AGNT` or `HMCE-VAT-AGNT` enrolment).
 
 You can confirm the message arrived by following the broker's logs (`docker logs -f prh-activemq`).
 

@@ -40,6 +40,10 @@ class DefaultAuthorisedActionSpec extends AnyWordSpec with Matchers:
     val identifiers = if withIdentifier then Seq(EnrolmentIdentifier("HMRCMGDAGENTREF", "agent-ref-123")) else Seq.empty
     Enrolments(Set(Enrolment("HMRC-MGD-AGNT", identifiers, if activated then "Activated" else "NotYetActivated")))
 
+  private def novaVatAgentEnrolments(activated: Boolean = true, withIdentifier: Boolean = true): Enrolments =
+    val identifiers = if withIdentifier then Seq(EnrolmentIdentifier("AgentRefNo", "agent-ref-123")) else Seq.empty
+    Enrolments(Set(Enrolment("HMCE-VAT-AGNT", identifiers, if activated then "Activated" else "NotYetActivated")))
+
   /** Returns whatever `result` is configured, standing in for the auth service call. */
   private class FakeAuthConnector(result: Future[Any]) extends AuthConnector:
     override def authorise[A](predicate: Predicate, retrieval: Retrieval[A])(implicit
@@ -61,16 +65,29 @@ class DefaultAuthorisedActionSpec extends AnyWordSpec with Matchers:
       status(result)          shouldBe OK
       contentAsString(result) shouldBe "published"
 
-    "return 403 for an Agent without the HMRC-MGD-AGNT enrolment" in:
+    "allow an Agent with an active HMCE-VAT-AGNT enrolment" in:
+      val result = invoke(retrieved(Some(AffinityGroup.Agent), novaVatAgentEnrolments()))
+      status(result)          shouldBe OK
+      contentAsString(result) shouldBe "published"
+
+    "return 403 for an Agent with neither enrolment" in:
       val result = invoke(retrieved(Some(AffinityGroup.Agent), Enrolments(Set.empty)))
       status(result) shouldBe FORBIDDEN
 
-    "return 403 for an Agent whose HMRC-MGD-AGNT enrolment is not activated" in:
+    "return 403 for an Agent whose HMRC-MGD-AGNT enrolment is not activated and has no HMCE-VAT-AGNT enrolment" in:
       val result = invoke(retrieved(Some(AffinityGroup.Agent), mgdAgentEnrolments(activated = false)))
       status(result) shouldBe FORBIDDEN
 
-    "return 403 for an Agent whose enrolment has no HMRCMGDAGENTREF identifier" in:
+    "return 403 for an Agent whose HMRC-MGD-AGNT enrolment has no HMRCMGDAGENTREF identifier and has no HMCE-VAT-AGNT enrolment" in:
       val result = invoke(retrieved(Some(AffinityGroup.Agent), mgdAgentEnrolments(withIdentifier = false)))
+      status(result) shouldBe FORBIDDEN
+
+    "return 403 for an Agent whose HMCE-VAT-AGNT enrolment is not activated and has no HMRC-MGD-AGNT enrolment" in:
+      val result = invoke(retrieved(Some(AffinityGroup.Agent), novaVatAgentEnrolments(activated = false)))
+      status(result) shouldBe FORBIDDEN
+
+    "return 403 for an Agent whose HMCE-VAT-AGNT enrolment has no AgentRefNo identifier and has no HMRC-MGD-AGNT enrolment" in:
+      val result = invoke(retrieved(Some(AffinityGroup.Agent), novaVatAgentEnrolments(withIdentifier = false)))
       status(result) shouldBe FORBIDDEN
 
     "return 403 for a non-Agent affinity group" in:
