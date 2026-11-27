@@ -83,7 +83,7 @@ class ActiveMqService @Inject() (
           message.setJMSCorrelationID(correlationId)
           properties.foreach(property => message.setStringProperty(property.key, property.value))
           producer.send(message)
-          logger.info(s"Published message to ${queueIdentifier.queueName} [correlationId=$correlationId] [payload=$payload]")
+          logger.info(s"Published message to ${queueIdentifier.queueName} [correlationId=$correlationId]")
         finally producer.close()
       finally session.close()
     }
